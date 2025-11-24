@@ -7,23 +7,32 @@ package controller;
 
 import dao.SalesPersonDAO;
 import java.io.IOException;
-import java.io.PrintWriter;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import model.SalesPerson;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
+ * Servlet for handling user authentication
  *
  * @author Huy
  */
 public class LoginServlet extends HttpServlet {
 
+    private static final Logger LOGGER = Logger.getLogger(LoginServlet.class.getName());
+    private static final String PARAM_USERNAME = "txtname";
+    private static final String ATTR_ERROR = "ERROR";
+    private static final String ATTR_USER = "USER";
+    private static final String ACTION_DASHBOARD = "MainServlet?action=DASHBOARD";
+    private static final String ACTION_HOME = "MainServlet?action=HOME";
+    private static final String ERROR_INVALID_USERNAME = "Invalid username!";
+
     /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
+     * Processes login requests for both HTTP GET and POST methods
      *
      * @param request servlet request
      * @param response servlet response
@@ -33,30 +42,45 @@ public class LoginServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            String name = request.getParameter("txtname");
-            if (name != null) {
-                SalesPersonDAO d = new SalesPersonDAO();
-                SalesPerson user = d.checkLogin(name);
-                if (user != null) {
-                    HttpSession s = request.getSession(true);
-                    s.setAttribute("USER", user);
-                    request.getRequestDispatcher("MainServlet?action=DASHBOARD").forward(request, response);
-                } else {
-                    request.setAttribute("ERROR", "Invalid username!");
-                    request.getRequestDispatcher("MainServlet?action=HOME").forward(request, response);
-                }
+
+        String username = request.getParameter(PARAM_USERNAME);
+
+        if (username == null || username.trim().isEmpty()) {
+            LOGGER.log(Level.WARNING, "Login attempt with empty username");
+            handleLoginFailure(request, response, ERROR_INVALID_USERNAME);
+            return;
+        }
+
+        try {
+            SalesPersonDAO dao = new SalesPersonDAO();
+            SalesPerson user = dao.checkLogin(username);
+
+            if (user != null) {
+                LOGGER.log(Level.INFO, "User logged in successfully: {0}", username);
+                HttpSession session = request.getSession(true);
+                session.setAttribute(ATTR_USER, user);
+                request.getRequestDispatcher(ACTION_DASHBOARD).forward(request, response);
             } else {
-                request.setAttribute("ERROR", "Invalid username!");
-                request.getRequestDispatcher("MainServlet?action=HOME").forward(request, response);
+                LOGGER.log(Level.WARNING, "Failed login attempt for username: {0}", username);
+                handleLoginFailure(request, response, ERROR_INVALID_USERNAME);
             }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error during login process", e);
+            handleLoginFailure(request, response, "An error occurred during login. Please try again.");
         }
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
-     * Handles the HTTP <code>GET</code> method.
+     * Handles login failure by setting error attribute and forwarding to home page
+     */
+    private void handleLoginFailure(HttpServletRequest request, HttpServletResponse response, String errorMessage)
+            throws ServletException, IOException {
+        request.setAttribute(ATTR_ERROR, errorMessage);
+        request.getRequestDispatcher(ACTION_HOME).forward(request, response);
+    }
+
+    /**
+     * Handles the HTTP GET method
      *
      * @param request servlet request
      * @param response servlet response
@@ -70,7 +94,7 @@ public class LoginServlet extends HttpServlet {
     }
 
     /**
-     * Handles the HTTP <code>POST</code> method.
+     * Handles the HTTP POST method
      *
      * @param request servlet request
      * @param response servlet response
@@ -84,13 +108,12 @@ public class LoginServlet extends HttpServlet {
     }
 
     /**
-     * Returns a short description of the servlet.
+     * Returns a short description of the servlet
      *
      * @return a String containing servlet description
      */
     @Override
     public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
-
+        return "Login Servlet - Handles user authentication for Car Dealership Management System";
+    }
 }
