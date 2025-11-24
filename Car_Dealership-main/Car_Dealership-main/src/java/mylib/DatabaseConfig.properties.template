@@ -1,0 +1,10 @@
+# Database Configuration Template
+# Copy this file and rename to DatabaseConfig.properties
+# Update the values according to your database setup
+
+db.name=Car_Dealership
+db.username=YOUR_USERNAME
+db.password=YOUR_PASSWORD
+db.host=localhost
+db.port=1433
+
